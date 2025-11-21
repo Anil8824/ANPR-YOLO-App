@@ -20,7 +20,7 @@ uploaded_file = st.file_uploader(
 
 # Load YOLO model
 try:
-    model = YOLO(r"C:\Users\Anil Agarwal\OneDrive\Desktop\Yolo\yolo-main\best_license_plate_model.pt")
+    model = YOLO("best_license_plate_model.pt")
 except Exception as e:
     st.error(f"Error loading YOLO model: {e}")
 
@@ -60,13 +60,11 @@ def predict_and_plot_video(video_path, output_path):
         frame_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
         frame_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
         fps = cap.get(cv2.CAP_PROP_FPS)
-
         if fps == 0 or fps is None:
             fps = 24  # fallback
 
         total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
 
-        # FIXED: correct mp4 writer
         fourcc = cv2.VideoWriter_fourcc(*'mp4v')
         out = cv2.VideoWriter(output_path, fourcc, fps, (frame_width, frame_height))
 
@@ -85,7 +83,6 @@ def predict_and_plot_video(video_path, output_path):
                 for box in result.boxes:
                     x1, y1, x2, y2 = map(int, box.xyxy[0])
                     conf = float(box.conf[0])
-
                     cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
                     cv2.putText(frame, f"{conf*100:.1f}%", (x1, y1 - 10),
                                 cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 0, 0), 2)
@@ -134,13 +131,23 @@ if uploaded_file:
     if result:
         ext = result.lower()
 
-        # ---------------------- FIXED VIDEO DISPLAY ----------------------
-        if ext.endswith((".mp4", ".avi", ".mov", ".mkv")):
+        # IMAGE DISPLAY
+        if ext.endswith((".jpg", ".jpeg", ".png", ".bmp")):
+            st.success("Image processed successfully!")
+            st.image(result)
+
+        # VIDEO DOWNLOAD (FIX FOR STREAMLIT CLOUD)
+        elif ext.endswith((".mp4", ".avi", ".mov", ".mkv")):
             st.success("Video processed successfully!")
 
             with open(result, "rb") as v:
-                st.video(v.read())
+                video_bytes = v.read()
 
-        else:
-            st.success("Image processed successfully!")
-            st.image(result)
+            st.download_button(
+                label="⬇ Download Processed Video",
+                data=video_bytes,
+                file_name="processed_output.mp4",
+                mime="video/mp4"
+            )
+
+            st.info("⚠ Streamlit Cloud cannot preview MP4 videos. Please download the file to view it.")
