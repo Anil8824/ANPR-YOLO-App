@@ -20,7 +20,7 @@ uploaded_file = st.file_uploader(
 
 # Load YOLO model
 try:
-    model = YOLO(r"C:\Users\Anil Agarwal\OneDrive\Desktop\Yolo\yolo-main\best_license_plate_model.pt")
+    model = YOLO("best_license_plate_model.pt")
 except Exception as e:
     st.error(f"Error loading YOLO model: {e}")
 
