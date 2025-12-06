@@ -4,72 +4,91 @@ import numpy as np
 from ultralytics import YOLO
 from PIL import Image
 import os
-import tempfile
+import easyocr
 
-# Ensure temp folder exists
+# Create temp folder
 os.makedirs("temp", exist_ok=True)
 
-# Set the title of the Streamlit app
-st.title("YOLO Image and Video Processing")
+# App title
+st.title("YOLO ANPR - Number Plate Detection & Recognition")
 
-# Allow users to upload images or videos
+# File uploader
 uploaded_file = st.file_uploader(
     "Upload an image or video",
     type=["jpg", "jpeg", "png", "bmp", "mp4", "avi", "mov", "mkv"]
 )
 
-# Load YOLO model
+# Load YOLO Model
 try:
     model = YOLO("best_license_plate_model.pt")
 except Exception as e:
     st.error(f"Error loading YOLO model: {e}")
 
+# Load EasyOCR
+reader = easyocr.Reader(['en'])
 
-# ---------------------- IMAGE PROCESSING ----------------------
-def predict_and_save_image(path_test_car, output_image_path):
+
+# ---------------- IMAGE PROCESSING ----------------
+def predict_and_save_image(input_path, output_path):
     try:
-        results = model.predict(path_test_car, device='cpu', verbose=False)
-        image = cv2.imread(path_test_car)
-        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        image = cv2.imread(input_path)
+        rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+
+        results = model.predict(rgb, device="cpu", verbose=False)
+
+        detected_text = None
 
         for result in results:
             for box in result.boxes:
                 x1, y1, x2, y2 = map(int, box.xyxy[0])
-                conf = float(box.conf[0])
-                cv2.rectangle(image, (x1, y1), (x2, y2), (0, 255, 0), 2)
-                cv2.putText(image, f'{conf*100:.2f}%', (x1, y1 - 10),
-                            cv2.FONT_HERSHEY_SIMPLEX, 0.9, (255, 0, 0), 2)
 
-        image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
-        cv2.imwrite(output_image_path, image)
-        return output_image_path
+                # Draw bounding box
+                cv2.rectangle(image, (x1, y1), (x2, y2), (0, 255, 0), 2)
+
+                # Crop number plate
+                crop = rgb[y1:y2, x1:x2]
+
+                if crop.size != 0:
+                    text_list = reader.readtext(crop, detail=0)
+                    if len(text_list) > 0:
+                        detected_text = text_list[0]
+
+                        # Put extracted text above the box
+                        cv2.putText(image, detected_text, (x1, y1 - 10),
+                                    cv2.FONT_HERSHEY_SIMPLEX, 1,
+                                    (255, 255, 0), 2)
+
+        cv2.imwrite(output_path, image)
+
+        if detected_text:
+            st.success(f"Detected Number Plate: **{detected_text}**")
+
+        return output_path
 
     except Exception as e:
-        st.error(f"Error processing image: {e}")
+        st.error(f"Image processing error: {e}")
         return None
 
 
-# ---------------------- VIDEO PROCESSING ----------------------
+# ---------------- VIDEO PROCESSING ----------------
 def predict_and_plot_video(video_path, output_path):
     try:
         cap = cv2.VideoCapture(video_path)
+
         if not cap.isOpened():
-            st.error(f"Error opening video file: {video_path}")
+            st.error("Could not open video!")
             return None
 
-        frame_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-        frame_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-        fps = cap.get(cv2.CAP_PROP_FPS)
-        if fps == 0 or fps is None:
-            fps = 24  # fallback
+        w = int(cap.get(3))
+        h = int(cap.get(4))
+        fps = cap.get(cv2.CAP_PROP_FPS) or 24
+        total = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
 
-        total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-
-        fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-        out = cv2.VideoWriter(output_path, fourcc, fps, (frame_width, frame_height))
+        fourcc = cv2.VideoWriter_fourcc(*"mp4v")
+        out = cv2.VideoWriter(output_path, fourcc, fps, (w, h))
 
         progress = st.progress(0)
-        current_frame = 0
+        count = 0
 
         while True:
             ret, frame = cap.read()
@@ -77,25 +96,33 @@ def predict_and_plot_video(video_path, output_path):
                 break
 
             rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            results = model.predict(rgb, device='cpu', verbose=False)
+            results = model.predict(rgb, device="cpu", verbose=False)
 
             for result in results:
                 for box in result.boxes:
                     x1, y1, x2, y2 = map(int, box.xyxy[0])
-                    conf = float(box.conf[0])
+
+                    # Draw box
                     cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
-                    cv2.putText(frame, f"{conf*100:.1f}%", (x1, y1 - 10),
-                                cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 0, 0), 2)
+
+                    # Crop & OCR
+                    crop = rgb[y1:y2, x1:x2]
+                    if crop.size != 0:
+                        text_list = reader.readtext(crop, detail=0)
+                        if len(text_list) > 0:
+                            detected_text = text_list[0]
+
+                            # Write OCR text
+                            cv2.putText(frame, detected_text, (x1, y1 - 10),
+                                        cv2.FONT_HERSHEY_SIMPLEX, 1,
+                                        (255, 255, 0), 2)
 
             out.write(frame)
-
-            current_frame += 1
-            progress.progress(min(current_frame / total_frames, 1.0))
+            count += 1
+            progress.progress(count / total)
 
         cap.release()
         out.release()
-        progress.progress(1.0)
-
         return output_path
 
     except Exception as e:
@@ -103,21 +130,17 @@ def predict_and_plot_video(video_path, output_path):
         return None
 
 
-# ---------------------- MEDIA HANDLER ----------------------
+# ---------------- MEDIA ROUTER ----------------
 def process_media(input_path, output_path):
-    ext = os.path.splitext(input_path)[1].lower()
+    ext = input_path.split(".")[-1].lower()
 
-    if ext in ['.mp4', '.avi', '.mov', '.mkv']:
+    if ext in ["mp4", "mov", "avi", "mkv"]:
         return predict_and_plot_video(input_path, output_path)
-
-    if ext in ['.jpg', '.jpeg', '.png', '.bmp']:
+    else:
         return predict_and_save_image(input_path, output_path)
 
-    st.error("Unsupported file format.")
-    return None
 
-
-# ---------------------- MAIN EXECUTION ----------------------
+# ---------------- MAIN ----------------
 if uploaded_file:
     input_path = os.path.join("temp", uploaded_file.name)
     output_path = os.path.join("temp", "output_" + uploaded_file.name)
@@ -125,29 +148,20 @@ if uploaded_file:
     with open(input_path, "wb") as f:
         f.write(uploaded_file.getbuffer())
 
-    st.write("Processing...")
+    st.write("Processing…")
     result = process_media(input_path, output_path)
 
     if result:
-        ext = result.lower()
-
-        # IMAGE DISPLAY
-        if ext.endswith((".jpg", ".jpeg", ".png", ".bmp")):
-            st.success("Image processed successfully!")
+        if result.lower().endswith((".jpg", ".jpeg", ".png", ".bmp")):
             st.image(result)
 
-        # VIDEO DOWNLOAD (FIX FOR STREAMLIT CLOUD)
-        elif ext.endswith((".mp4", ".avi", ".mov", ".mkv")):
-            st.success("Video processed successfully!")
-
+        else:
             with open(result, "rb") as v:
-                video_bytes = v.read()
+                st.download_button(
+                    "⬇ Download Processed Video",
+                    v.read(),
+                    file_name="processed_output.mp4",
+                    mime="video/mp4"
+                )
 
-            st.download_button(
-                label="⬇ Download Processed Video",
-                data=video_bytes,
-                file_name="processed_output.mp4",
-                mime="video/mp4"
-            )
-
-            st.info("⚠ Streamlit Cloud cannot preview MP4 videos. Please download the file to view it.")
+            st.info("Streamlit Cloud does not support video preview—please download to view.")
