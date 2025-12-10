@@ -44,6 +44,7 @@ ANPR-YOLO-App/
 
 
 
+
 ## ⚙ How It Works
 
 **User uploads an image or video.**
