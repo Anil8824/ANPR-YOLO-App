@@ -1,16 +1,16 @@
 import streamlit as st
 import cv2
 import numpy as np
-import torch
+from ultralytics import YOLO
 from PIL import Image
+import pytesseract
 import os
-import easyocr
 
 # Create temp folder
 os.makedirs("temp", exist_ok=True)
 
 # App title
-st.title("YOLOv5 ANPR - Number Plate Detection & Recognition")
+st.title("YOLO ANPR - Number Plate Detection & Recognition (Tesseract OCR)")
 
 # File uploader
 uploaded_file = st.file_uploader(
@@ -18,21 +18,11 @@ uploaded_file = st.file_uploader(
     type=["jpg", "jpeg", "png", "bmp", "mp4", "avi", "mov", "mkv"]
 )
 
-# Load YOLOv5 Model (Torch Hub)
-@st.cache_resource
-def load_model():
-    try:
-        model = torch.hub.load("ultralytics/yolov5", "custom", path="best.pt")
-        return model
-    except Exception as e:
-        st.error(f"Error loading YOLO model: {e}")
-        return None
-
-model = load_model()
-
-# Load EasyOCR
-reader = easyocr.Reader(['en'])
-
+# Load YOLO Model
+try:
+    model = YOLO("best_license_plate_model.pt")  # keep your model file inside repo
+except Exception as e:
+    st.error(f"Error loading YOLO model: {e}")
 
 # ---------------- IMAGE PROCESSING ----------------
 def predict_and_save_image(input_path, output_path):
@@ -40,26 +30,30 @@ def predict_and_save_image(input_path, output_path):
         image = cv2.imread(input_path)
         rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
-        results = model(rgb)
+        results = model.predict(rgb, verbose=False)
 
         detected_text = None
 
-        for det in results.xyxy[0]:
-            x1, y1, x2, y2, conf, cls = det.int()
+        for result in results:
+            for box in result.boxes:
+                x1, y1, x2, y2 = map(int, box.xyxy[0])
 
-            # Draw bounding box
-            cv2.rectangle(image, (x1, y1), (x2, y2), (0, 255, 0), 2)
+                # Draw bounding box
+                cv2.rectangle(image, (x1, y1), (x2, y2), (0, 255, 0), 2)
 
-            # Crop number plate
-            crop = rgb[y1:y2, x1:x2]
+                # Crop plate
+                crop = rgb[y1:y2, x1:x2]
 
-            if crop.size != 0:
-                text_list = reader.readtext(crop, detail=0)
-                if len(text_list) > 0:
-                    detected_text = text_list[0]
-                    cv2.putText(image, detected_text, (x1, y1 - 10),
-                                cv2.FONT_HERSHEY_SIMPLEX, 1,
-                                (255, 255, 0), 2)
+                if crop.size != 0:
+                    # OCR using Tesseract
+                    text = pytesseract.image_to_string(crop, config='--psm 7')
+                    text = "".join(filter(str.isalnum, text))
+
+                    if text:
+                        detected_text = text
+                        cv2.putText(image, detected_text, (x1, y1 - 10),
+                                    cv2.FONT_HERSHEY_SIMPLEX, 1,
+                                    (255, 255, 0), 2)
 
         cv2.imwrite(output_path, image)
 
@@ -69,7 +63,7 @@ def predict_and_save_image(input_path, output_path):
         return output_path
 
     except Exception as e:
-        st.error(f"Image processing error: {e}")
+        st.error(f"Image error: {e}")
         return None
 
 
@@ -87,8 +81,7 @@ def predict_and_plot_video(video_path, output_path):
         fps = cap.get(cv2.CAP_PROP_FPS) or 24
         total = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
 
-        fourcc = cv2.VideoWriter_fourcc(*"mp4v")
-        out = cv2.VideoWriter(output_path, fourcc, fps, (w, h))
+        out = cv2.VideoWriter(output_path, cv2.VideoWriter_fourcc(*"mp4v"), fps, (w, h))
 
         progress = st.progress(0)
         count = 0
@@ -99,21 +92,22 @@ def predict_and_plot_video(video_path, output_path):
                 break
 
             rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            results = model(rgb)
+            results = model.predict(rgb, verbose=False)
 
-            for det in results.xyxy[0]:
-                x1, y1, x2, y2, conf, cls = det.int()
+            for result in results:
+                for box in result.boxes:
+                    x1, y1, x2, y2 = map(int, box.xyxy[0])
+                    cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
 
-                cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
+                    crop = rgb[y1:y2, x1:x2]
+                    if crop.size != 0:
+                        text = pytesseract.image_to_string(crop, config='--psm 7')
+                        text = "".join(filter(str.isalnum, text))
 
-                crop = rgb[y1:y2, x1:x2]
-                if crop.size != 0:
-                    text_list = reader.readtext(crop, detail=0)
-                    if len(text_list) > 0:
-                        detected_text = text_list[0]
-                        cv2.putText(frame, detected_text, (x1, y1 - 10),
-                                    cv2.FONT_HERSHEY_SIMPLEX, 1,
-                                    (255, 255, 0), 2)
+                        if text:
+                            cv2.putText(frame, text, (x1, y1 - 10),
+                                        cv2.FONT_HERSHEY_SIMPLEX, 1,
+                                        (255, 255, 0), 2)
 
             out.write(frame)
             count += 1
@@ -124,14 +118,13 @@ def predict_and_plot_video(video_path, output_path):
         return output_path
 
     except Exception as e:
-        st.error(f"Video processing error: {e}")
+        st.error(f"Video error: {e}")
         return None
 
 
-# ---------------- MEDIA ROUTER ----------------
+# ---------------- ROUTER ----------------
 def process_media(input_path, output_path):
     ext = input_path.split(".")[-1].lower()
-
     if ext in ["mp4", "mov", "avi", "mkv"]:
         return predict_and_plot_video(input_path, output_path)
     else:
@@ -152,7 +145,6 @@ if uploaded_file:
     if result:
         if result.lower().endswith((".jpg", ".jpeg", ".png", ".bmp")):
             st.image(result)
-
         else:
             with open(result, "rb") as v:
                 st.download_button(
@@ -161,4 +153,4 @@ if uploaded_file:
                     file_name="processed_output.mp4",
                     mime="video/mp4"
                 )
-            st.info("Streamlit Cloud does not support video preview — download to view.")
+            st.info("Streamlit Cloud cannot preview video — download to view.")
