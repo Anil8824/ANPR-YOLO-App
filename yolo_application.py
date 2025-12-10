@@ -1,7 +1,7 @@
 import streamlit as st
 import cv2
 import numpy as np
-from ultralytics import YOLO
+import torch
 from PIL import Image
 import os
 import easyocr
@@ -10,7 +10,7 @@ import easyocr
 os.makedirs("temp", exist_ok=True)
 
 # App title
-st.title("YOLO ANPR - Number Plate Detection & Recognition")
+st.title("YOLOv5 ANPR - Number Plate Detection & Recognition")
 
 # File uploader
 uploaded_file = st.file_uploader(
@@ -18,11 +18,17 @@ uploaded_file = st.file_uploader(
     type=["jpg", "jpeg", "png", "bmp", "mp4", "avi", "mov", "mkv"]
 )
 
-# Load YOLO Model
-try:
-    model = YOLO("best_license_plate_model.pt")
-except Exception as e:
-    st.error(f"Error loading YOLO model: {e}")
+# Load YOLOv5 Model (Torch Hub)
+@st.cache_resource
+def load_model():
+    try:
+        model = torch.hub.load("ultralytics/yolov5", "custom", path="best.pt")
+        return model
+    except Exception as e:
+        st.error(f"Error loading YOLO model: {e}")
+        return None
+
+model = load_model()
 
 # Load EasyOCR
 reader = easyocr.Reader(['en'])
@@ -34,29 +40,26 @@ def predict_and_save_image(input_path, output_path):
         image = cv2.imread(input_path)
         rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
-        results = model.predict(rgb, device="cpu", verbose=False)
+        results = model(rgb)
 
         detected_text = None
 
-        for result in results:
-            for box in result.boxes:
-                x1, y1, x2, y2 = map(int, box.xyxy[0])
+        for det in results.xyxy[0]:
+            x1, y1, x2, y2, conf, cls = det.int()
 
-                # Draw bounding box
-                cv2.rectangle(image, (x1, y1), (x2, y2), (0, 255, 0), 2)
+            # Draw bounding box
+            cv2.rectangle(image, (x1, y1), (x2, y2), (0, 255, 0), 2)
 
-                # Crop number plate
-                crop = rgb[y1:y2, x1:x2]
+            # Crop number plate
+            crop = rgb[y1:y2, x1:x2]
 
-                if crop.size != 0:
-                    text_list = reader.readtext(crop, detail=0)
-                    if len(text_list) > 0:
-                        detected_text = text_list[0]
-
-                        # Put extracted text above the box
-                        cv2.putText(image, detected_text, (x1, y1 - 10),
-                                    cv2.FONT_HERSHEY_SIMPLEX, 1,
-                                    (255, 255, 0), 2)
+            if crop.size != 0:
+                text_list = reader.readtext(crop, detail=0)
+                if len(text_list) > 0:
+                    detected_text = text_list[0]
+                    cv2.putText(image, detected_text, (x1, y1 - 10),
+                                cv2.FONT_HERSHEY_SIMPLEX, 1,
+                                (255, 255, 0), 2)
 
         cv2.imwrite(output_path, image)
 
@@ -96,26 +99,21 @@ def predict_and_plot_video(video_path, output_path):
                 break
 
             rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            results = model.predict(rgb, device="cpu", verbose=False)
+            results = model(rgb)
 
-            for result in results:
-                for box in result.boxes:
-                    x1, y1, x2, y2 = map(int, box.xyxy[0])
+            for det in results.xyxy[0]:
+                x1, y1, x2, y2, conf, cls = det.int()
 
-                    # Draw box
-                    cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
+                cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
 
-                    # Crop & OCR
-                    crop = rgb[y1:y2, x1:x2]
-                    if crop.size != 0:
-                        text_list = reader.readtext(crop, detail=0)
-                        if len(text_list) > 0:
-                            detected_text = text_list[0]
-
-                            # Write OCR text
-                            cv2.putText(frame, detected_text, (x1, y1 - 10),
-                                        cv2.FONT_HERSHEY_SIMPLEX, 1,
-                                        (255, 255, 0), 2)
+                crop = rgb[y1:y2, x1:x2]
+                if crop.size != 0:
+                    text_list = reader.readtext(crop, detail=0)
+                    if len(text_list) > 0:
+                        detected_text = text_list[0]
+                        cv2.putText(frame, detected_text, (x1, y1 - 10),
+                                    cv2.FONT_HERSHEY_SIMPLEX, 1,
+                                    (255, 255, 0), 2)
 
             out.write(frame)
             count += 1
@@ -163,5 +161,4 @@ if uploaded_file:
                     file_name="processed_output.mp4",
                     mime="video/mp4"
                 )
-
-            st.info("Streamlit Cloud does not support video preview—please download to view.")
+            st.info("Streamlit Cloud does not support video preview — download to view.")
