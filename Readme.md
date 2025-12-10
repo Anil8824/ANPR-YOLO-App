@@ -49,17 +49,23 @@ https://anpr-yolo-app-6776.streamlit.app/
 
 
 
-⚙ How It Works
-User uploads an image or video.
-YOLOv8 detects number plate regions.
-Detected plate is cropped and passed to EasyOCR.
-OCR text is drawn on top of the frame.
-For videos, each frame is processed and exported as a downloadable MP4.
-Final image or video is returned to the user.
+## ⚙ How It Works
+
+**User uploads an image or video.**
+
+**YOLOv8 detects number plate regions.**
+
+**Detected plate is cropped and passed to EasyOCR.**
+
+**OCR text is drawn on top of the frame.**
+
+**For videos, each frame is processed and exported as a downloadable MP4.**
+
+**Final image or video is returned to the user.**
 
 
 
-🛠 Tech Stack
+## 🛠 Tech Stack
 
 | Technology               | Purpose                |
 | ------------------------ | ---------------------- |
@@ -72,38 +78,55 @@ Final image or video is returned to the user.
 
 
 
-🚀 Run Locally
-1️⃣ Clone the repository
-git clone https://github.com/Anil8824/ANPR-YOLO-App.git
-cd ANPR-YOLO-App
+## 🚀 Run Locally
 
-2️⃣ Create virtual environment
-python -m venv venv
-venv\Scripts\activate    # Windows
+### 1️⃣ Clone the repository
 
-3️⃣ Install dependencies
-pip install -r requirements.txt
+**git clone https://github.com/Anil8824/ANPR-YOLO-App.git**
 
-4️⃣ Run the Streamlit app
-streamlit run yolo_application.py
+**cd ANPR-YOLO-App**
 
 
-🧠 Model Used
-This project uses a custom-trained YOLOv8 ANPR model:
-best_license_plate_model.pt
+### 2️⃣ Create virtual environment
+
+**python -m venv venv**
+**venv\Scripts\activate    # Windows**
 
 
-☁ Notes for Streamlit Cloud
-Uses opencv-python-headless → avoids libGL errors
-EasyOCR works fine without GPU
-Streamlit Cloud cannot preview videos, so videos are provided as downloadable file
+### 3️⃣ Install dependencies
 
-👨‍💻 Developer
-Anil Agarwal
-Python Developer | ML/AI Enthusiast | Computer Vision Learner
+**pip install -r requirements.txt**
 
-🔗 GitHub: https://github.com/Anil8824
-🔗 LinkedIn: https://www.linkedin.com/in/anil-agarwal-a5a1a2217/
+
+### 4️⃣ Run the Streamlit app
+
+**streamlit run yolo_application.py**
+
+
+## 🧠 Model Used
+
+**This project uses a custom-trained YOLOv8 ANPR model:**
+
+**best_license_plate_model.pt**
+
+
+## ☁ Notes for Streamlit Cloud
+**Uses opencv-python-headless → avoids libGL errors**
+
+**EasyOCR works fine without GPU**
+
+**Streamlit Cloud cannot preview videos, so videos are provided as downloadable file**
+
+
+## 👨‍💻 Developer
+
+**Anil Agarwal**
+
+**Python Developer | ML/AI Enthusiast | Computer Vision Learner**
+
+**🔗 GitHub: https://github.com/Anil8824**
+
+**🔗 LinkedIn: https://www.linkedin.com/in/anil-agarwal-a5a1a2217/**
 
 
 ⭐ Support This Project
