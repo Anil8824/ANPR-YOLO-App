@@ -33,14 +33,14 @@
 
 ## 📁 Project Structure
 
-(**ANPR-YOLO-App/
+**ANPR-YOLO-App/
 │
 ├── best_license_plate_model.pt      # YOLOv8 trained ANPR model
 ├── yolo_application.py              # Main Streamlit application
 ├── requirements.txt                 # Project dependencies
 ├── demo.mp4                         # Sample video
 ├── images.jpeg                      # Sample test image
-└── README.md                        # Documentation**)
+└── README.md                        # Documentation**
 
 
 
