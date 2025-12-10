@@ -33,14 +33,14 @@
 
 ## 📁 Project Structure
 
-**ANPR-YOLO-App/**
-**│**
-**├── best_license_plate_model.pt      # YOLOv8 trained ANPR model**
-**├── yolo_application.py              # Main Streamlit application**
-**├── requirements.txt                 # Project dependencies**
-**├── demo.mp4                         # Sample video**
-**├── images.jpeg                      # Sample test image**
-**└── README.md                        # Documentation**
+(**ANPR-YOLO-App/
+│
+├── best_license_plate_model.pt      # YOLOv8 trained ANPR model
+├── yolo_application.py              # Main Streamlit application
+├── requirements.txt                 # Project dependencies
+├── demo.mp4                         # Sample video
+├── images.jpeg                      # Sample test image
+└── README.md                        # Documentation**)
 
 
 
@@ -124,6 +124,7 @@
 **🔗 LinkedIn: https://www.linkedin.com/in/anil-agarwal-a5a1a2217/**
 
 
-⭐ Support This Project
-If this helped you, please ⭐ star the repo on GitHub.
-Your support motivates more AI/ML projects!
+## ⭐ Support This Project
+**If this helped you, please ⭐ star the repo on GitHub.**
+
+**Your support motivates more AI/ML projects!**
