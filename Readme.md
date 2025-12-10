@@ -1,4 +1,5 @@
-#🚗 ANPR – Automatic Number Plate Recognition using YOLOv8, EasyOCR & Streamlit
+# 🚗 ANPR – Automatic Number Plate Recognition using YOLOv8, EasyOCR & Streamlit
+
 **This project is a complete ANPR (Automatic Number Plate Recognition) system that detects number plates from images and videos using YOLOv8 and extracts the text using EasyOCR.
 The system runs fully on CPU and is deployed on Streamlit Cloud.**
 
