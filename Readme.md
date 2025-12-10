@@ -6,46 +6,41 @@
 
 ## ✨ Features
 
-🔍 Number Plate Detection using YOLOv8
+**🔍 Number Plate Detection using YOLOv8**
 
-🧾 Text Extraction using EasyOCR
+**🧾 Text Extraction using EasyOCR**
 
-🖼 Supports Images & Videos
+**🖼 Supports Images & Videos**
 
-🟩 Bounding boxes + extracted text overlay
+**🟩 Bounding boxes + extracted text overlay**
 
-🌐 Streamlit-based clean web interface
+**🌐 Streamlit-based clean web interface**
 
-⚡ CPU-only — no GPU required
+**⚡ CPU-only — no GPU required**
 
-📥 Downloadable processed video
+**📥 Downloadable processed video**
 
-☁ Works smoothly on Streamlit Cloud
+**☁ Works smoothly on Streamlit Cloud**
 
 
 ## 🌍 Live Demo
 
 ### 👉 Try the deployed app:
 
-https://anpr-yolo-app-6776.streamlit.app/
+**https://anpr-yolo-app-6776.streamlit.app/**
+
 
 
 ## 📁 Project Structure
 
-**ANPR-YOLO-App/
-
-│
-├── best_license_plate_model.pt      # YOLOv8 trained ANPR model
-
-├── yolo_application.py              # Main Streamlit application
-
-├── requirements.txt                 # Project dependencies
-
-├── demo.mp4                         # Sample video
-
-├── images.jpeg                      # Sample test image
-
-└── README.md                        # Documentation**
+**ANPR-YOLO-App/**
+**│**
+**├── best_license_plate_model.pt      # YOLOv8 trained ANPR model**
+**├── yolo_application.py              # Main Streamlit application**
+**├── requirements.txt                 # Project dependencies**
+**├── demo.mp4                         # Sample video**
+**├── images.jpeg                      # Sample test image**
+**└── README.md                        # Documentation**
 
 
 
